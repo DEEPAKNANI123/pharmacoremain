@@ -1,5 +1,5 @@
 import React, { useState, useMemo, lazy, Suspense } from 'react';
-import { Search, ScanLine, CreditCard, Banknote, Star, Plus, Minus, Trash2, CheckCircle, X } from 'lucide-react';
+import { Search, ScanLine, CreditCard, Banknote, Star, Plus, Minus, Trash2, CheckCircle, X, AlertTriangle } from 'lucide-react';
 import { useDatabase } from '../../context/DatabaseContext';
 import type { CartItem } from '../../context/DatabaseContext';
 import './PosSales.css';
@@ -11,7 +11,7 @@ export default function PosSales() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('All');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [successMsg, setSuccessMsg] = useState('');
+  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [lastScannedId, setLastScannedId] = useState<string | null>(null);
 
@@ -37,8 +37,16 @@ export default function PosSales() {
     });
   }, [inventory, searchTerm, filter, lastScannedId]);
 
+  const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
   const addToCart = (med: any) => {
-    if (med.stock <= 0) return;
+    if (med.stock <= 0) {
+      showNotification(`Insufficient stock for ${med.name}`, 'error');
+      return;
+    }
     
     setCart(prev => {
       const existing = prev.find(item => item.medicineId === med.id);
@@ -64,20 +72,25 @@ export default function PosSales() {
       if (data.sku) {
         const med = inventory.find(m => m.sku === data.sku);
         if (med) {
+          // If JSON contains updates, apply them first
           const updates: any = {};
-          if (data.name) updates.name = data.name;
-          if (data.stock) updates.stock = data.stock;
-          if (data.price) updates.price = data.price;
-          if (data.batch) updates.batch = data.batch;
-          if (data.expiryDate) updates.expiryDate = data.expiryDate;
+          let hasUpdates = false;
+          if (data.name) { updates.name = data.name; hasUpdates = true; }
+          if (data.stock) { updates.stock = data.stock; hasUpdates = true; }
+          if (data.price) { updates.price = data.price; hasUpdates = true; }
+          if (data.batch) { updates.batch = data.batch; hasUpdates = true; }
+          if (data.expiryDate) { updates.expiryDate = data.expiryDate; hasUpdates = true; }
 
-          await updateMedicine(med.id, updates);
+          if (hasUpdates) {
+            await updateMedicine(med.id, updates);
+          }
+
+          // Then add to cart
+          addToCart(med);
           setLastScannedId(med.id);
-          setSuccessMsg('Item added successfully');
-          setTimeout(() => setSuccessMsg(''), 4000);
+          showNotification(`${med.name} added to cart`);
         } else {
-          setSuccessMsg(`Medicine with SKU ${data.sku} not found.`);
-          setTimeout(() => setSuccessMsg(''), 4000);
+          showNotification(`Medicine with SKU ${data.sku} not found.`, 'error');
         }
       }
     } catch (e) {
@@ -86,11 +99,9 @@ export default function PosSales() {
       if (med) {
         addToCart(med);
         setLastScannedId(med.id);
-        setSuccessMsg('Item added successfully');
-        setTimeout(() => setSuccessMsg(''), 4000);
+        showNotification(`${med.name} added to cart`);
       } else {
-        setSuccessMsg(`Barcode ${decodedText} not found.`);
-        setTimeout(() => setSuccessMsg(''), 4000);
+        showNotification(`Barcode ${decodedText} not found.`, 'error');
       }
     }
   };
@@ -114,13 +125,16 @@ export default function PosSales() {
     setCart(prev => prev.filter(item => item.medicineId !== id));
   };
 
-  const handleCheckout = (method: 'Cash' | 'Card') => {
+  const handleCheckout = async (method: 'Cash' | 'Card') => {
     if (cart.length === 0) return;
-    const txnId = processSale(cart, method);
-    if (txnId) {
-      setCart([]);
-      setSuccessMsg(`Payment Received. Transaction ${txnId} completed!`);
-      setTimeout(() => setSuccessMsg(''), 4000);
+    try {
+      const txnId = await processSale(cart, method);
+      if (txnId) {
+        setCart([]);
+        showNotification(`Payment Received. Transaction ${txnId} completed!`);
+      }
+    } catch (error) {
+      showNotification('Transaction failed. Please try again.', 'error');
     }
   };
 
@@ -147,10 +161,20 @@ export default function PosSales() {
 
       <div className="pos-main">
         <div className="pos-catalog">
-          {successMsg && (
-            <div className="success-notification panel">
-              <CheckCircle size={20} className="text-success" />
-              <span>{successMsg}</span>
+          {notification && (
+            <div className={`notification panel ${notification.type}`}>
+              {notification.type === 'success' ? (
+                <CheckCircle size={20} className="text-success" />
+              ) : (
+                <AlertTriangle size={20} className="text-danger" />
+              )}
+              <span>{notification.message}</span>
+              <button 
+                className="close-notification" 
+                onClick={() => setNotification(null)}
+              >
+                <X size={14} />
+              </button>
             </div>
           )}
 
