@@ -7,7 +7,7 @@ import './PosSales.css';
 const QRScanner = lazy(() => import('../../components/QRScanner'));
 
 export default function PosSales() {
-  const { inventory, processSale, updateMedicine } = useDatabase();
+  const { inventory, processSale, updateMedicine, addMedicine } = useDatabase();
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('All');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -16,6 +16,18 @@ export default function PosSales() {
   const [lastScannedId, setLastScannedId] = useState<string | null>(null);
   const [unrecognizedBarcode, setUnrecognizedBarcode] = useState<string | null>(null);
   const [assignSearchTerm, setAssignSearchTerm] = useState('');
+  const [isQuickAdd, setIsQuickAdd] = useState(false);
+  const [newMedData, setNewMedData] = useState<{
+    name: string;
+    category: 'Prescription (Rx)' | 'OTC' | 'Cold Chain' | 'Controlled';
+    price: string;
+    stock: string;
+  }>({
+    name: '',
+    category: 'OTC',
+    price: '',
+    stock: '10'
+  });
 
   const filteredInventory = useMemo(() => {
     const filtered = inventory.filter(med => {
@@ -177,6 +189,34 @@ export default function PosSales() {
       setAssignSearchTerm('');
     } catch (e) {
       showNotification("Failed to assign barcode.", "error");
+    }
+  };
+
+  const handleQuickAdd = async () => {
+    if (!unrecognizedBarcode || !newMedData.name) return;
+    try {
+      const med = await addMedicine({
+        name: newMedData.name,
+        sku: unrecognizedBarcode,
+        category: newMedData.category,
+        batch: `BATCH-${Math.floor(100 + Math.random() * 900)}`,
+        expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        price: Number(newMedData.price) || 0,
+        purchasePrice: (Number(newMedData.price) || 0) * 0.7,
+        stock: Number(newMedData.stock) || 0,
+        reorderPoint: 5,
+        storage: 'Room temp',
+        isPerishable: false
+      });
+      
+      addToCart(med);
+      setLastScannedId(med.id);
+      showNotification(`${med.name} added as new product and added to cart`);
+      setUnrecognizedBarcode(null);
+      setIsQuickAdd(false);
+      setNewMedData({ name: '', category: 'OTC', price: '', stock: '10' });
+    } catch (e) {
+      showNotification("Failed to add new medicine.", "error");
     }
   };
 
@@ -385,42 +425,110 @@ export default function PosSales() {
           <div className="modal-content animate-slide-up" style={{ maxWidth: '500px' }}>
             <div className="flex-between mb-4">
               <div>
-                <h2 className="text-danger">Unrecognized Barcode</h2>
+                <h2 className="text-danger">{isQuickAdd ? 'Add New Product' : 'Unrecognized Barcode'}</h2>
                 <p className="text-sm text-muted">Barcode: <strong>{unrecognizedBarcode}</strong></p>
               </div>
-              <button className="btn-icon" onClick={() => setUnrecognizedBarcode(null)}><X size={20} /></button>
+              <button className="btn-icon" onClick={() => { setUnrecognizedBarcode(null); setIsQuickAdd(false); }}><X size={20} /></button>
             </div>
             
-            <p className="mb-4 text-sm">This barcode is not in your inventory. Search for a medicine to assign this barcode to it permanently.</p>
-            
-            <input 
-              type="text" 
-              className="form-control mb-4" 
-              placeholder="Search medicine name to assign..."
-              value={assignSearchTerm}
-              onChange={e => setAssignSearchTerm(e.target.value)}
-              autoFocus
-            />
-
-            <div className="assign-list scroll-y-400">
-              {inventory
-                .filter(m => m.name.toLowerCase().includes(assignSearchTerm.toLowerCase()))
-                .slice(0, 10)
-                .map(med => (
-                  <div key={med.id} className="assign-item panel mb-2" onClick={() => handleAssignBarcode(med.id)}>
-                    <div className="flex-between">
-                      <div>
-                        <strong>{med.name}</strong>
-                        <p className="text-xs text-muted">Current SKU: {med.sku}</p>
-                      </div>
-                      <button className="btn btn-sm btn-primary">Assign</button>
-                    </div>
+            {isQuickAdd ? (
+              <div className="quick-add-form">
+                <div className="form-group">
+                  <label>Medicine Name</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="Enter full name"
+                    value={newMedData.name}
+                    onChange={e => setNewMedData({...newMedData, name: e.target.value})}
+                    autoFocus
+                  />
+                </div>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Category</label>
+                    <select 
+                      className="form-control"
+                      value={newMedData.category}
+                      onChange={e => setNewMedData({...newMedData, category: e.target.value as any})}
+                    >
+                      <option>OTC</option>
+                      <option>Prescription (Rx)</option>
+                      <option>Cold Chain</option>
+                      <option>Controlled</option>
+                    </select>
                   </div>
-                ))}
-              {inventory.filter(m => m.name.toLowerCase().includes(assignSearchTerm.toLowerCase())).length === 0 && (
-                <p className="text-center text-muted p-4">No matching medicines found.</p>
-              )}
-            </div>
+                  <div className="form-group">
+                    <label>Sales Price (AED)</label>
+                    <input 
+                      type="number" 
+                      className="form-control" 
+                      value={newMedData.price}
+                      onChange={e => setNewMedData({...newMedData, price: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Initial Stock</label>
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    value={newMedData.stock}
+                    onChange={e => setNewMedData({...newMedData, stock: e.target.value})}
+                  />
+                </div>
+                <div className="flex-between mt-4">
+                  <button className="btn btn-outline" onClick={() => setIsQuickAdd(false)}>Back to Assign</button>
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={handleQuickAdd}
+                    disabled={!newMedData.name || !newMedData.price}
+                  >
+                    Save & Add to Cart
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="mb-4 text-sm">This barcode is not in your inventory. You can assign it to an existing medicine or add it as a new product.</p>
+                
+                <div className="flex gap-2 mb-4">
+                  <button 
+                    className="btn btn-primary flex-1" 
+                    onClick={() => setIsQuickAdd(true)}
+                  >
+                    + Add as New Medicine
+                  </button>
+                </div>
+
+                <div className="divider mb-4"><span className="text-xs text-muted">OR ASSIGN TO EXISTING</span></div>
+
+                <input 
+                  type="text" 
+                  className="form-control mb-4" 
+                  placeholder="Search medicine name to assign..."
+                  value={assignSearchTerm}
+                  onChange={e => setAssignSearchTerm(e.target.value)}
+                />
+
+                <div className="assign-list scroll-y-400">
+                  {inventory
+                    .filter(m => m.name.toLowerCase().includes(assignSearchTerm.toLowerCase()))
+                    .slice(0, 5)
+                    .map(med => (
+                      <div key={med.id} className="assign-item panel mb-2" onClick={() => handleAssignBarcode(med.id)}>
+                        <div className="flex-between">
+                          <div>
+                            <strong>{med.name}</strong>
+                            <p className="text-xs text-muted">Current SKU: {med.sku}</p>
+                          </div>
+                          <button className="btn btn-sm btn-primary">Assign</button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
