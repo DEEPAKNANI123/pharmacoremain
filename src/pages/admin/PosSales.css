@@ -337,3 +337,18 @@
   align-items: center;
   margin-bottom: 1rem;
 }
+
+.assign-item {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.assign-item:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.scroll-y-400 {
+  max-height: 400px;
+  overflow-y: auto;
+}
