@@ -10,6 +10,7 @@ export interface CartItem {
   purchasePrice: number;
   name: string;
   category: string;
+  unit: 'Box' | 'Strip';
 }
 
 export interface User {
@@ -65,7 +66,7 @@ interface DatabaseContextType {
   cart: CartItem[];
   isLoading: boolean;
   isOffline: boolean;
-  addToCart: (medicine: Medicine, quantity: number) => void;
+  addToCart: (medicine: Medicine, quantity: number, unit?: 'Box' | 'Strip') => void;
   updateCartQuantity: (medicineId: string, delta: number) => void;
   removeFromCart: (medicineId: string) => void;
   clearCart: () => void;
@@ -161,12 +162,16 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
             id: m.id,
             name: m.name,
             sku: m.sku,
+            stripSku: m.strip_sku,
             category: m.category,
             batch: m.batch,
             expiryDate: m.expiry_date,
             price: m.price,
+            stripPrice: m.strip_price,
             purchasePrice: m.purchase_price,
             stock: m.stock,
+            stripStock: m.strip_stock || 0,
+            unitsPerBox: m.units_per_box || 10,
             reorderPoint: m.reorder_point,
             storage: m.storage,
             isPerishable: m.is_perishable
@@ -276,20 +281,25 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const addToCart = (medicine: Medicine, quantity: number) => {
+  const addToCart = (medicine: Medicine, quantity: number, unit: 'Box' | 'Strip' = 'Box') => {
     setCart(prev => {
-      const existing = prev.find(item => item.medicineId === medicine.id);
+      const existing = prev.find(item => item.medicineId === medicine.id && item.unit === unit);
       let updated;
+      const price = unit === 'Strip' 
+        ? (medicine.stripPrice || (medicine.price / medicine.unitsPerBox)) 
+        : medicine.price;
+
       if (existing) {
-        updated = prev.map(item => item.medicineId === medicine.id ? { ...item, quantity: item.quantity + quantity } : item);
+        updated = prev.map(item => (item.medicineId === medicine.id && item.unit === unit) ? { ...item, quantity: item.quantity + quantity } : item);
       } else {
         updated = [...prev, {
           medicineId: medicine.id,
           quantity,
-          price: medicine.price,
-          purchasePrice: medicine.purchasePrice,
+          price: price,
+          purchasePrice: medicine.purchasePrice / (unit === 'Strip' ? medicine.unitsPerBox : 1),
           name: medicine.name,
-          category: medicine.category
+          category: medicine.category,
+          unit: unit
         }];
       }
       localStorage.setItem('pharma_cart', JSON.stringify(updated));
@@ -332,7 +342,23 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
           await supabase.from('transaction_items').insert(cartItems.map(item => ({ transaction_id: tx.id, medicine_id: item.medicineId, name: item.name, quantity: item.quantity, price: item.price, purchase_price: item.purchasePrice })));
           for (const item of cartItems) {
             const med = inventory.find(m => m.id === item.medicineId);
-            if (med) await supabase.from('medicines').update({ stock: Math.max(0, med.stock - item.quantity) }).eq('id', med.id);
+            if (med) {
+              const uPerBox = med.unitsPerBox || 1;
+              let newStock = med.stock;
+              let newStripStock = med.stripStock || 0;
+
+              if (item.unit === 'Box') {
+                newStock = Math.max(0, newStock - item.quantity);
+              } else {
+                const totalStripsToRemove = item.quantity;
+                let availableStrips = (newStock * uPerBox) + newStripStock;
+                availableStrips = Math.max(0, availableStrips - totalStripsToRemove);
+                
+                newStock = Math.floor(availableStrips / uPerBox);
+                newStripStock = availableStrips % uPerBox;
+              }
+              await supabase.from('medicines').update({ stock: newStock, strip_stock: newStripStock }).eq('id', med.id);
+            }
           }
           const { data: updatedMed } = await supabase.from('medicines').select('*');
           if (updatedMed) setInventory(updatedMed);
@@ -350,8 +376,23 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     });
     setInventory(prev => {
       const updated = prev.map(med => {
-        const cartItem = cartItems.find(item => item.medicineId === med.id);
-        return cartItem ? { ...med, stock: Math.max(0, med.stock - cartItem.quantity) } : med;
+        const cartItemsForMed = cartItems.filter(item => item.medicineId === med.id);
+        if (cartItemsForMed.length === 0) return med;
+        
+        const uPerBox = med.unitsPerBox || 1;
+        let totalStrips = (med.stock * uPerBox) + (med.stripStock || 0);
+        
+        cartItemsForMed.forEach(item => {
+          if (item.unit === 'Box') totalStrips -= (item.quantity * uPerBox);
+          else totalStrips -= item.quantity;
+        });
+
+        totalStrips = Math.max(0, totalStrips);
+        return { 
+          ...med, 
+          stock: Math.floor(totalStrips / uPerBox), 
+          stripStock: totalStrips % uPerBox 
+        };
       });
       localStorage.setItem('pharma_inventory', JSON.stringify(updated));
       return updated;
@@ -486,11 +527,15 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     const supabaseUpdates: any = {};
     if (updates.name !== undefined) supabaseUpdates.name = updates.name;
     if (updates.sku !== undefined) supabaseUpdates.sku = updates.sku;
+    if (updates.stripSku !== undefined) supabaseUpdates.strip_sku = updates.stripSku;
     if (updates.category !== undefined) supabaseUpdates.category = updates.category;
     if (updates.batch !== undefined) supabaseUpdates.batch = updates.batch;
     if (updates.price !== undefined) supabaseUpdates.price = updates.price;
+    if (updates.stripPrice !== undefined) supabaseUpdates.strip_price = updates.stripPrice;
     if (updates.purchasePrice !== undefined) supabaseUpdates.purchase_price = updates.purchasePrice;
     if (updates.stock !== undefined) supabaseUpdates.stock = updates.stock;
+    if (updates.stripStock !== undefined) supabaseUpdates.strip_stock = updates.stripStock;
+    if (updates.unitsPerBox !== undefined) supabaseUpdates.units_per_box = updates.unitsPerBox;
     if (updates.reorderPoint !== undefined) supabaseUpdates.reorder_point = updates.reorderPoint;
     if (updates.storage !== undefined) supabaseUpdates.storage = updates.storage;
     if (updates.isPerishable !== undefined) supabaseUpdates.is_perishable = updates.isPerishable;
@@ -520,12 +565,16 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
           id,
           name: newMed.name,
           sku: newMed.sku,
+          strip_sku: newMed.stripSku,
           category: newMed.category,
           batch: newMed.batch,
           expiry_date: newMed.expiryDate,
           price: newMed.price,
+          strip_price: newMed.stripPrice,
           purchase_price: newMed.purchasePrice,
           stock: newMed.stock,
+          strip_stock: newMed.stripStock,
+          units_per_box: newMed.unitsPerBox,
           reorder_point: newMed.reorderPoint,
           storage: newMed.storage,
           is_perishable: newMed.isPerishable
