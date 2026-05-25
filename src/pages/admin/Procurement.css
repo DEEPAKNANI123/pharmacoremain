@@ -1,0 +1,149 @@
+.procurement-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.procurement-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.procurement-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.procurement-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.procurement-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.metric-card.procurement {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.metric-card.procurement h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+}
+
+.metric-card.procurement .metric-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+/* Status Badges */
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-badge.in-transit {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.pending-grn {
+  background-color: #ffedd5;
+  color: #9a3412;
+}
+
+.status-badge.completed {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.mismatch {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* Action Buttons */
+.btn-grn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.btn-grn:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-review {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 12px;
+}
+
+.btn-review:hover {
+  background-color: #fee2e2;
+}
+
+.procurement-table-panel {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.procurement-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.procurement-table th {
+  background-color: #fafafa;
+  padding: 1rem 1.5rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.procurement-table td {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.875rem;
+  color: var(--color-text-main);
+}
+
+.procurement-table tr:last-child td {
+  border-bottom: none;
+}
+
+.po-number {
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.supplier-name {
+  color: var(--color-text-muted);
+}

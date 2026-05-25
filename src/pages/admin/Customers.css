@@ -1,0 +1,62 @@
+.customers-container {
+  padding: 2rem;
+  background-color: var(--color-bg-base);
+}
+
+.customers-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.customers-panel {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.customer-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.customer-table th {
+  text-align: left;
+  padding: 1rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+  background: #fcfcfc;
+}
+
+.customer-table td {
+  padding: 1rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.customer-table tr:last-child td {
+  border-bottom: none;
+}
+
+.loyalty-pts {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.meta-text {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+.birthday-alert {
+  color: #ea580c;
+  font-weight: 600;
+}

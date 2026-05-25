@@ -1,0 +1,53 @@
+.treasury-container {
+  padding: 2rem;
+  background-color: var(--color-bg-base);
+}
+
+.treasury-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.treasury-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.treasury-panel {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.treasury-list-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 1.5rem;
+}
+
+/* Specific item styles */
+.cash-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cash-item:last-child {
+  border-bottom: none;
+}
+
+.amount-pos { color: #16a34a; font-weight: 700; }
+.amount-neg { color: #dc2626; font-weight: 700; }
+
+.upcoming-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}

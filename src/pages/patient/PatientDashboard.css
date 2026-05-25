@@ -1,0 +1,325 @@
+.patient-home {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.welcome-banner {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 4rem;
+    align-items: center;
+    padding: 2rem 0;
+}
+
+.search-box-home {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.5rem;
+    padding-left: 1.5rem;
+    max-width: 600px;
+    margin-top: 1.5rem;
+    border-radius: 20px;
+    background: white;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+.rx-upload-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--color-primary);
+    border-radius: 40px;
+    padding: 3.5rem 5rem;
+    color: white;
+    gap: 5rem;
+    align-items: center;
+    box-shadow: 0 30px 60px -12px rgba(37, 99, 235, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.rx-text {
+    flex: 1;
+}
+
+.rx-visual {
+    flex: 0.8;
+}
+
+.circle-bg {
+    width: 240px;
+    height: 240px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 4px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.badge-white {
+    background: white;
+    color: var(--color-primary);
+}
+
+.btn-white {
+    background: white;
+    color: var(--color-primary);
+}
+
+.btn-glass {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.dashboard-section {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.featured-meds-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.med-mini-card {
+    padding: 1.5rem;
+    position: relative;
+}
+
+.mini-img {
+    height: 100px;
+    background: #f8fafc;
+    border-radius: 12px;
+}
+
+.add-mini {
+    width: 32px;
+    height: 32px;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.add-mini:hover {
+    transform: scale(1.1);
+}
+
+.category-grid-full {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+}
+
+.cat-icon-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ai-preview-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+    padding: 2rem;
+}
+
+.ai-preview-panel {
+    background: white;
+    width: 100%;
+    max-width: 900px;
+    padding: 2.5rem;
+    border-radius: 20px;
+    box-shadow: 0 40px 100px -20px rgba(15, 23, 42, 0.4);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.val-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.val-banner {
+    background: #ecfdf5;
+    border: 1px solid #10b981;
+    color: #065f46;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 2rem;
+}
+
+.val-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-radius: 16px;
+    margin-bottom: 2.5rem;
+}
+
+.val-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.val-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.val-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.val-section-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 0.75rem;
+}
+
+.val-med-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    transition: all 0.2s;
+}
+
+.val-med-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.05);
+}
+
+.val-med-name {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-primary);
+    margin-bottom: 1.5rem;
+}
+
+.val-analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.val-sub-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.val-sub-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.val-sub-content {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+.val-divider {
+    height: 1px;
+    background: #f1f5f9;
+    margin: 1rem 0;
+    border: none;
+    border-top: 1px dashed #cbd5e1;
+}
+
+.val-standard-dose {
+    background: #f1f5f9;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+}
+
+.stat-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.1);
+    border-color: var(--color-primary-light);
+}
+
+.scanning-active {
+    border-color: white !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.text-glow {
+    text-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
+}
+
+.bg-muted-light {
+    background: #f8fafc;
+}
+
+.status-badge {
+    padding: 0.35rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.status-pending { background: #fef3c7; color: #d97706; }
+.status-approved { background: #dcfce7; color: #166534; }
+
+.error-box {
+    margin-top: 1.5rem;
+    padding: 1rem 1.5rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 16px;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
