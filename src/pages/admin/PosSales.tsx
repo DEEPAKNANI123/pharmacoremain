@@ -138,7 +138,7 @@ export default function PosSales() {
             return; // Early exit on success
           } else {
             console.warn("⚠️ [SCANNER] Medicine not found for key:", searchKey);
-            // Pre-fill NEW medicine data from JSON attributes if they exist
+            // RESET and Pre-fill NEW medicine data from JSON attributes
             setNewMedData({
               name: data.name || '',
               category: (data.category && ['OTC', 'Prescription (Rx)', 'Cold Chain', 'Controlled'].includes(data.category)) ? data.category : 'OTC',
@@ -146,7 +146,7 @@ export default function PosSales() {
               stock: data.stock ? String(data.stock) : '10'
             });
             setUnrecognizedBarcode(searchKey);
-            setIsQuickAdd(true); // Jump straight to the add form since we have data
+            setIsQuickAdd(true); 
             return;
           }
         }
@@ -175,7 +175,10 @@ export default function PosSales() {
         showNotification(`${med.name} added to cart`);
       } else {
         console.warn("⚠️ [SCANNER] Barcode not found:", sku);
+        // RESET form for new unknown barcode
+        setNewMedData({ name: '', category: 'OTC', price: '', stock: '10' });
         setUnrecognizedBarcode(sku);
+        setIsQuickAdd(false); // Show the choice screen first for plain barcodes
       }
     } catch (err) {
       console.error("❌ [SCANNER] Critical error in handleScan:", err);
