@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { Search, ScanLine, CreditCard, Banknote, Star, Plus, Minus, Trash2, CheckCircle, X } from 'lucide-react';
 import { useDatabase } from '../../context/DatabaseContext';
 import type { CartItem } from '../../context/DatabaseContext';
-import QRScanner from '../../components/QRScanner';
 import './PosSales.css';
+
+const QRScanner = lazy(() => import('../../components/QRScanner'));
 
 export default function PosSales() {
   const { inventory, processSale, updateMedicine } = useDatabase();
@@ -282,10 +283,12 @@ export default function PosSales() {
         </div>
       </div>
       {isScannerOpen && (
-        <QRScanner 
-          onScan={handleScan}
-          onClose={() => setIsScannerOpen(false)}
-        />
+        <Suspense fallback={<div className="qr-scanner-overlay"><div className="qr-scanner-modal">Loading scanner...</div></div>}>
+          <QRScanner 
+            onScan={handleScan}
+            onClose={() => setIsScannerOpen(false)}
+          />
+        </Suspense>
       )}
     </div>
   );
