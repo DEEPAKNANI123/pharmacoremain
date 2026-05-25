@@ -99,9 +99,17 @@ export default function PosSales() {
       // 1. JSON-based Medicine Update or Identification
       if (data) {
         console.log("📦 [SCANNER] JSON object detected:", data);
-        const skuValue = data.sku || data.Sku || data.SKU || data.id || data.Id || data.ID;
+        const skuValue = data.sku || data.Sku || data.SKU || data.id || data.Id || data.ID || data.barcode || data.Barcode;
         const searchKey = String(skuValue || '').trim();
         
+        // Even if we don't have a SKU yet, we definitely want to pre-fill the form with what we have
+        setNewMedData({
+          name: data.name || data.Name || '',
+          category: (data.category && ['OTC', 'Prescription (Rx)', 'Cold Chain', 'Controlled'].includes(data.category)) ? data.category : 'OTC',
+          price: (data.price || data.Price) ? String(data.price || data.Price) : '',
+          stock: (data.stock || data.Stock) ? String(data.stock || data.Stock) : '10'
+        });
+
         if (searchKey) {
           const med = inventory.find(m => 
             String(m.sku).toLowerCase() === searchKey.toLowerCase() || 
@@ -113,17 +121,14 @@ export default function PosSales() {
             let hasUpdates = false;
             
             if (data.name) { updates.name = data.name; hasUpdates = true; }
-            
             if (data.stock !== undefined) {
               const sCount = Number(data.stock);
               if (!isNaN(sCount)) { updates.stock = sCount; hasUpdates = true; }
             }
-            
             if (data.price !== undefined) {
               const pValue = Number(data.price);
               if (!isNaN(pValue)) { updates.price = pValue; hasUpdates = true; }
             }
-            
             if (data.batch) { updates.batch = data.batch; hasUpdates = true; }
             if (data.expiryDate) { updates.expiryDate = data.expiryDate; hasUpdates = true; }
 
@@ -135,20 +140,19 @@ export default function PosSales() {
             addToCart(med);
             setLastScannedId(med.id);
             showNotification(`${med.name} detected and added to cart`);
-            return; // Early exit on success
+            return;
           } else {
             console.warn("⚠️ [SCANNER] Medicine not found for key:", searchKey);
-            // RESET and Pre-fill NEW medicine data from JSON attributes
-            setNewMedData({
-              name: data.name || '',
-              category: (data.category && ['OTC', 'Prescription (Rx)', 'Cold Chain', 'Controlled'].includes(data.category)) ? data.category : 'OTC',
-              price: data.price ? String(data.price) : '',
-              stock: data.stock ? String(data.stock) : '10'
-            });
             setUnrecognizedBarcode(searchKey);
             setIsQuickAdd(true); 
             return;
           }
+        } else if (data.name) {
+          // If we have a name but NO SKU, treat the whole raw string or a random ID as SKU
+          const fallbackSku = `QR-${Math.floor(Math.random()*1000)}`;
+          setUnrecognizedBarcode(fallbackSku);
+          setIsQuickAdd(true);
+          return;
         }
       }
 
