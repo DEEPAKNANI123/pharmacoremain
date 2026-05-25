@@ -82,6 +82,7 @@ interface DatabaseContextType {
   markAlertAsReviewed: (id: string) => void;
   markAllAlertsAsReviewed: (ids: string[]) => void;
   updateMedicine: (id: string, updates: Partial<Medicine>) => Promise<void>;
+  addMedicine: (medicine: Omit<Medicine, 'id'>) => Promise<Medicine>;
   receiveStock: (id: string, quantity: number) => Promise<void>;
 }
 
@@ -509,6 +510,40 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const addMedicine = async (medicine: Omit<Medicine, 'id'>) => {
+    const id = `MED-${Math.floor(10000 + Math.random() * 90000)}`;
+    const newMed: Medicine = { ...medicine, id };
+
+    if (!isOffline) {
+      try {
+        const supabaseMed = {
+          id,
+          name: newMed.name,
+          sku: newMed.sku,
+          category: newMed.category,
+          batch: newMed.batch,
+          expiry_date: newMed.expiryDate,
+          price: newMed.price,
+          purchase_price: newMed.purchasePrice,
+          stock: newMed.stock,
+          reorder_point: newMed.reorderPoint,
+          storage: newMed.storage,
+          is_perishable: newMed.isPerishable
+        };
+        await supabase.from('medicines').insert(supabaseMed);
+      } catch (err) {
+        console.error('Failed to sync new medicine to Supabase:', err);
+      }
+    }
+
+    setInventory(prev => {
+      const updated = [...prev, newMed].sort((a,b) => a.name.localeCompare(b.name));
+      localStorage.setItem('pharma_inventory', JSON.stringify(updated));
+      return updated;
+    });
+    return newMed;
+  };
+
   const receiveStock = async (id: string, quantity: number) => {
     const med = inventory.find(m => m.id === id);
     if (!med) return;
@@ -534,7 +569,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <DatabaseContext.Provider value={{ inventory, transactions, users, orders, rxQueue, currentUser, cart, isLoading, isOffline, addToCart, updateCartQuantity, removeFromCart, clearCart, processSale, createOrder, updateOrderStatus, submitPrescription, updateRxStatus, signup, login, logout, resetDatabase, reviewedAlerts, markAlertAsReviewed, markAllAlertsAsReviewed, updateMedicine, receiveStock }}>
+    <DatabaseContext.Provider value={{ inventory, transactions, users, orders, rxQueue, currentUser, cart, isLoading, isOffline, addToCart, updateCartQuantity, removeFromCart, clearCart, processSale, createOrder, updateOrderStatus, submitPrescription, updateRxStatus, signup, login, logout, resetDatabase, reviewedAlerts, markAlertAsReviewed, markAllAlertsAsReviewed, updateMedicine, addMedicine, receiveStock }}>
       {children}
     </DatabaseContext.Provider>
   );
