@@ -4,13 +4,17 @@ export type StorageType = 'Room temp' | 'Cold' | 'Controlled';
 export interface Medicine {
   id: string;
   name: string;
-  sku: string;
+  sku: string; // Box Barcode
+  stripSku?: string; // Strip Barcode
   category: MedicineCategory;
   batch: string;
   expiryDate: string; // YYYY-MM-DD
-  price: number;
+  price: number; // Box Price
+  stripPrice?: number; // Strip Price
   purchasePrice: number;
-  stock: number;
+  stock: number; // Total boxes
+  stripStock: number; // Loose strips (not in boxes)
+  unitsPerBox: number; // Conversion factor
   reorderPoint: number;
   storage: StorageType;
   isPerishable: boolean;
@@ -75,12 +79,16 @@ export const generateMockMedicines = (): Medicine[] => {
       id: `MED-${1000 + i}`,
       name,
       sku: `SKU-${1000 + i}`,
+      stripSku: `STRIP-${1000 + i}`,
       category,
       batch: `B-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
       expiryDate: isoExpiry,
       price,
+      stripPrice: parseFloat((price / 10).toFixed(2)),
       purchasePrice,
       stock,
+      stripStock: Math.floor(Math.random() * 10),
+      unitsPerBox: 10,
       reorderPoint,
       storage,
       isPerishable: storage === 'Cold' || name.includes("Insulin") || Math.random() < 0.1
