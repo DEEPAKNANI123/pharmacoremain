@@ -10,7 +10,8 @@ export default function PosSales() {
   const { inventory, processSale, updateMedicine, addMedicine } = useDatabase();
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('All');
-  const [cart, setCart] = useState<CartItem[]>([]);
+  // Local cart state now includes unit for multi-packaging support
+  const [cart, setCart] = useState<(CartItem & { unit: 'Box' | 'Strip' })[]>([]);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [lastScannedId, setLastScannedId] = useState<string | null>(null);
@@ -57,25 +58,30 @@ export default function PosSales() {
     setTimeout(() => setNotification(null), 5000);
   };
 
-  const addToCart = (med: any) => {
-    if (med.stock <= 0) {
+  const addToCart = (med: any, quantity: number = 1, unit: 'Box' | 'Strip' = 'Box') => {
+    const totalStripsAvailable = (med.stock * (med.unitsPerBox || 1)) + (med.stripStock || 0);
+    const unitStrips = unit === 'Box' ? (med.unitsPerBox || 1) : 1;
+    
+    if (totalStripsAvailable < unitStrips) {
       showNotification(`Insufficient stock for ${med.name}`, 'error');
       return;
     }
+
+    const price = unit === 'Strip' ? (med.stripPrice || (med.price / (med.unitsPerBox || 1))) : med.price;
     
     setCart(prev => {
-      const existing = prev.find(item => item.medicineId === med.id);
+      const existing = prev.find(item => item.medicineId === med.id && item.unit === unit);
       if (existing) {
-        if (existing.quantity >= med.stock) return prev;
-        return prev.map(item => item.medicineId === med.id ? { ...item, quantity: item.quantity + 1 } : item);
+        return prev.map(item => (item.medicineId === med.id && item.unit === unit) ? { ...item, quantity: item.quantity + quantity } : item);
       }
       return [...prev, { 
         medicineId: med.id, 
-        quantity: 1, 
-        price: med.price, 
-        purchasePrice: med.purchasePrice,
+        quantity, 
+        price, 
+        purchasePrice: med.purchasePrice / (unit === 'Strip' ? (med.unitsPerBox || 1) : 1),
         name: med.name, 
-        category: med.category 
+        category: med.category,
+        unit
       }];
     });
   };
@@ -113,10 +119,14 @@ export default function PosSales() {
         if (searchKey) {
           const med = inventory.find(m => 
             String(m.sku).toLowerCase() === searchKey.toLowerCase() || 
+            String(m.stripSku || '').toLowerCase() === searchKey.toLowerCase() ||
             String(m.id).toLowerCase() === searchKey.toLowerCase()
           );
           
           if (med) {
+            const scansStrip = String(med.stripSku || '').toLowerCase() === searchKey.toLowerCase();
+            const unit: 'Box' | 'Strip' = (scansStrip) ? 'Strip' : 'Box';
+            
             const updates: any = {};
             let hasUpdates = false;
             
@@ -137,9 +147,9 @@ export default function PosSales() {
               await updateMedicine(med.id, updates);
             }
 
-            addToCart(med);
+            addToCart(med, 1, unit);
             setLastScannedId(med.id);
-            showNotification(`${med.name} detected and added to cart`);
+            showNotification(`${med.name} (${unit}) added to cart`);
             return;
           } else {
             console.warn("⚠️ [SCANNER] Medicine not found for key:", searchKey);
@@ -148,7 +158,6 @@ export default function PosSales() {
             return;
           }
         } else if (data.name) {
-          // If we have a name but NO SKU, treat the whole raw string or a random ID as SKU
           const fallbackSku = `QR-${Math.floor(Math.random()*1000)}`;
           setUnrecognizedBarcode(fallbackSku);
           setIsQuickAdd(true);
@@ -169,14 +178,17 @@ export default function PosSales() {
 
       const med = inventory.find(m => 
         String(m.sku).toLowerCase() === sku.toLowerCase() || 
+        String(m.stripSku || '').toLowerCase() === sku.toLowerCase() ||
         String(m.id).toLowerCase() === sku.toLowerCase() ||
         String(m.batch).toLowerCase() === sku.toLowerCase()
       );
 
       if (med) {
-        addToCart(med);
+        const isStrip = String(med.stripSku || '').toLowerCase() === sku.toLowerCase();
+        const unit = isStrip ? 'Strip' : 'Box';
+        addToCart(med, 1, unit);
         setLastScannedId(med.id);
-        showNotification(`${med.name} added to cart`);
+        showNotification(`${med.name} (${unit}) added to cart`);
       } else {
         console.warn("⚠️ [SCANNER] Barcode not found:", sku);
         // RESET form for new unknown barcode
@@ -196,7 +208,7 @@ export default function PosSales() {
       await updateMedicine(medId, { sku: unrecognizedBarcode });
       const med = inventory.find(m => m.id === medId);
       if (med) {
-        addToCart(med);
+        addToCart(med, 1, 'Box');
         setLastScannedId(medId);
         showNotification(`Barcode assigned to ${med.name} and added to cart`);
       }
@@ -219,12 +231,15 @@ export default function PosSales() {
         price: Number(newMedData.price) || 0,
         purchasePrice: (Number(newMedData.price) || 0) * 0.7,
         stock: Number(newMedData.stock) || 0,
+        stripStock: 0,
+        unitsPerBox: 10,
+        stripPrice: (Number(newMedData.price) || 0) / 10,
         reorderPoint: 5,
         storage: 'Room temp',
         isPerishable: false
       });
       
-      addToCart(med);
+      addToCart(med, 1, 'Box');
       setLastScannedId(med.id);
       showNotification(`${med.name} added as new product and added to cart`);
       setUnrecognizedBarcode(null);
@@ -235,14 +250,19 @@ export default function PosSales() {
     }
   };
 
-  const updateQuantity = (id: string, delta: number) => {
+  const updateQuantity = (id: string, unit: 'Box' | 'Strip', delta: number) => {
     setCart(prev => {
       return prev.map(item => {
-        if (item.medicineId === id) {
+        if (item.medicineId === id && item.unit === unit) {
           const medRecord = inventory.find(m => m.id === id);
+          if (!medRecord) return item;
+          
           let newQty = item.quantity + delta;
-          if (newQty < 1) return item; // Handled by Trash icon instead
-          if (medRecord && newQty > medRecord.stock) newQty = medRecord.stock;
+          if (newQty < 1) return item; 
+          
+          const totalAvailable = item.unit === 'Box' ? medRecord.stock : (medRecord.stock * medRecord.unitsPerBox + medRecord.stripStock);
+          if (newQty > totalAvailable) newQty = totalAvailable;
+
           return { ...item, quantity: newQty };
         }
         return item;
@@ -250,8 +270,8 @@ export default function PosSales() {
     });
   };
 
-  const removeFromCart = (id: string) => {
-    setCart(prev => prev.filter(item => item.medicineId !== id));
+  const removeFromCart = (id: string, unit: 'Box' | 'Strip') => {
+    setCart(prev => prev.filter(item => !(item.medicineId === id && item.unit === unit)));
   };
 
   const handleCheckout = async (method: 'Cash' | 'Card') => {
@@ -347,9 +367,10 @@ export default function PosSales() {
                     <h4>{med.name}</h4>
                   </div>
                   <p className="medicine-batch text-muted">Batch {med.batch.split('-')[1]} · Exp {formatExpiry}</p>
-                  <p className="text-xs mb-1" style={{color: med.stock <= med.reorderPoint ? 'var(--color-danger)' : 'var(--color-text-light)'}}>
-                    Stock: {med.stock} {med.stock <= med.reorderPoint && '(Low)'}
-                  </p>
+                  <div className="text-xs mb-1">
+                    <span style={{color: med.stock < 5 ? 'var(--color-danger)' : 'var(--color-text-light)'}}>Stock: {med.stock} Boxes</span>
+                    {med.stripStock > 0 && <span className="ml-2" style={{ color: 'var(--color-primary)' }}> + {med.stripStock} Strips</span>}
+                  </div>
                   <div className="flex-between medicine-footer">
                     <span className="medicine-price">AED {med.price.toFixed(2)}</span>
                     {getCategoryBadge(med.category)}
@@ -377,15 +398,15 @@ export default function PosSales() {
                 {cart.map(item => (
                   <div key={item.medicineId} className="cart-item">
                     <div className="cart-item-details">
-                      <p className="cart-item-name">{item.name}</p>
+                      <p className="cart-item-name">{item.name} <span className="text-xs text-muted" style={{ fontWeight: 400 }}>({item.unit})</span></p>
                       <p className="cart-item-price">AED {item.price.toFixed(2)}</p>
                     </div>
                     <div className="cart-item-actions">
-                      <button className="qty-btn" onClick={() => item.quantity > 1 ? updateQuantity(item.medicineId, -1) : removeFromCart(item.medicineId)}>
+                      <button className="qty-btn" onClick={() => item.quantity > 1 ? updateQuantity(item.medicineId, item.unit, -1) : removeFromCart(item.medicineId, item.unit)}>
                         {item.quantity > 1 ? <Minus size={14} /> : <Trash2 size={14} className="text-danger" />}
                       </button>
                       <span className="qty-val">{item.quantity}</span>
-                      <button className="qty-btn" onClick={() => updateQuantity(item.medicineId, 1)}><Plus size={14} /></button>
+                      <button className="qty-btn" onClick={() => updateQuantity(item.medicineId, item.unit, 1)}><Plus size={14} /></button>
                     </div>
                     <div className="cart-item-subtotal font-bold">
                       AED {(item.price * item.quantity).toFixed(2)}
