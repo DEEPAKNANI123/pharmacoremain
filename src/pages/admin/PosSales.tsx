@@ -14,6 +14,8 @@ export default function PosSales() {
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [lastScannedId, setLastScannedId] = useState<string | null>(null);
+  const [unrecognizedBarcode, setUnrecognizedBarcode] = useState<string | null>(null);
+  const [assignSearchTerm, setAssignSearchTerm] = useState('');
 
   const filteredInventory = useMemo(() => {
     const filtered = inventory.filter(med => {
@@ -143,7 +145,8 @@ export default function PosSales() {
 
       const med = inventory.find(m => 
         String(m.sku).toLowerCase() === sku.toLowerCase() || 
-        String(m.id).toLowerCase() === sku.toLowerCase()
+        String(m.id).toLowerCase() === sku.toLowerCase() ||
+        String(m.batch).toLowerCase() === sku.toLowerCase()
       );
 
       if (med) {
@@ -152,11 +155,28 @@ export default function PosSales() {
         showNotification(`${med.name} added to cart`);
       } else {
         console.warn("⚠️ [SCANNER] Barcode not found:", sku);
-        showNotification(`Barcode [${sku}] not recognized.`, 'error');
+        setUnrecognizedBarcode(sku);
       }
     } catch (err) {
       console.error("❌ [SCANNER] Critical error in handleScan:", err);
       showNotification("Scan error. Please check your data format.", 'error');
+    }
+  };
+
+  const handleAssignBarcode = async (medId: string) => {
+    if (!unrecognizedBarcode) return;
+    try {
+      await updateMedicine(medId, { sku: unrecognizedBarcode });
+      const med = inventory.find(m => m.id === medId);
+      if (med) {
+        addToCart(med);
+        setLastScannedId(medId);
+        showNotification(`Barcode assigned to ${med.name} and added to cart`);
+      }
+      setUnrecognizedBarcode(null);
+      setAssignSearchTerm('');
+    } catch (e) {
+      showNotification("Failed to assign barcode.", "error");
     }
   };
 
@@ -360,6 +380,51 @@ export default function PosSales() {
           </div>
         </div>
       </div>
+      {unrecognizedBarcode && (
+        <div className="modal-overlay">
+          <div className="modal-content animate-slide-up" style={{ maxWidth: '500px' }}>
+            <div className="flex-between mb-4">
+              <div>
+                <h2 className="text-danger">Unrecognized Barcode</h2>
+                <p className="text-sm text-muted">Barcode: <strong>{unrecognizedBarcode}</strong></p>
+              </div>
+              <button className="btn-icon" onClick={() => setUnrecognizedBarcode(null)}><X size={20} /></button>
+            </div>
+            
+            <p className="mb-4 text-sm">This barcode is not in your inventory. Search for a medicine to assign this barcode to it permanently.</p>
+            
+            <input 
+              type="text" 
+              className="form-control mb-4" 
+              placeholder="Search medicine name to assign..."
+              value={assignSearchTerm}
+              onChange={e => setAssignSearchTerm(e.target.value)}
+              autoFocus
+            />
+
+            <div className="assign-list scroll-y-400">
+              {inventory
+                .filter(m => m.name.toLowerCase().includes(assignSearchTerm.toLowerCase()))
+                .slice(0, 10)
+                .map(med => (
+                  <div key={med.id} className="assign-item panel mb-2" onClick={() => handleAssignBarcode(med.id)}>
+                    <div className="flex-between">
+                      <div>
+                        <strong>{med.name}</strong>
+                        <p className="text-xs text-muted">Current SKU: {med.sku}</p>
+                      </div>
+                      <button className="btn btn-sm btn-primary">Assign</button>
+                    </div>
+                  </div>
+                ))}
+              {inventory.filter(m => m.name.toLowerCase().includes(assignSearchTerm.toLowerCase())).length === 0 && (
+                <p className="text-center text-muted p-4">No matching medicines found.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {isScannerOpen && (
         <Suspense fallback={<div className="qr-scanner-overlay"><div className="qr-scanner-modal">Loading scanner...</div></div>}>
           <QRScanner 
