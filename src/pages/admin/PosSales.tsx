@@ -138,7 +138,15 @@ export default function PosSales() {
             return; // Early exit on success
           } else {
             console.warn("⚠️ [SCANNER] Medicine not found for key:", searchKey);
-            showNotification(`Product with key ${searchKey} not in inventory.`, 'error');
+            // Pre-fill NEW medicine data from JSON attributes if they exist
+            setNewMedData({
+              name: data.name || '',
+              category: (data.category && ['OTC', 'Prescription (Rx)', 'Cold Chain', 'Controlled'].includes(data.category)) ? data.category : 'OTC',
+              price: data.price ? String(data.price) : '',
+              stock: data.stock ? String(data.stock) : '10'
+            });
+            setUnrecognizedBarcode(searchKey);
+            setIsQuickAdd(true); // Jump straight to the add form since we have data
             return;
           }
         }
